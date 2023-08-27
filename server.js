@@ -7,8 +7,49 @@ const schema = buildSchema(`
         hello: String
         otherField: Int
         rollDice(numDice: Int!, numSides: Int = 6): [Int]
+        user(name: String = "Test"): User
+        getDie(numSides: Int): RandomDie
+    }
+
+    type User {
+        name: String
+        age: Float
+    }
+
+    type RandomDie {
+        numSides: Int
+        rollOnce: Int
+        roll(numRolls: Int!): [Int]
     }
 `);
+
+class RandomDie {
+    constructor (numSides) {
+        this.numSides = numSides;
+    }
+
+    rollOnce() {
+        return 1 + Math.floor(Math.random() * this.numSides)
+    }
+
+    roll({numRolls}) {
+        var output = []
+        for (let i = 0; i < numRolls; i++) {
+            output.push(this.rollOnce())
+        }
+        return output
+    }
+}
+
+class User {
+    constructor (name) {
+        this.name = name;
+    }
+
+    age() {
+        return Math.floor(Math.random() * 100)
+    }
+}
 
 // Resolver
 const rootValue = {
@@ -22,7 +63,9 @@ const rootValue = {
         }
 
         return output;
-    }
+    },
+    user: (args) => new User(args.name),
+    getDie: (args) => new RandomDie(args.numSides),
 };
 
 const app = express();
