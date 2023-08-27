@@ -1,6 +1,11 @@
 type Query {
     info: String!
-    feed(filter: String): [Link!]!
+    feed(filter: String, skip: Int, take: Int): Feed
+}
+
+type Feed {
+    links: [Link!]!
+    count: Int!
 }
 
 type Link {
