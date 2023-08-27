@@ -5,26 +5,19 @@ const { PrismaClient } = require("@prisma/client")
 
 const prisma = new PrismaClient()
 
+const {getUserId} = require('./utils.js');
+
+const Query = require('./resolvers/Query.js');
+const Mutation = require('./resolvers/Mutation.js');
+const User = require('./resolvers/User.js');
+const Link = require('./resolvers/Link.js');
+
 // 2
 const resolvers = {
-  Query: {
-    info: () => `This is the API of a Hackernews Clone`,
-    feed: (parent, args, context) => {
-      return context.prisma.link.findMany()
-    }
-  },
-
-  Mutation: {
-    post: (parent, args, context, info) => {
-      const newLink = context.prisma.link.create({
-        data: {
-          url: args.url,
-          description: args.description,
-        },
-      });
-      return newLink
-    },
-  }
+  Query,
+  Mutation,
+  User,
+  Link,
 }
 
 // 3
@@ -34,9 +27,14 @@ const server = new ApolloServer({
     'utf8'
   ),
   resolvers,
-  context: {
+  context: ({ req }) => ({
+    ...req,
     prisma,
-  }
+    userId:
+      req && req.headers.authorization
+        ? getUserId(req)
+        : null
+  })
 })
 
 server
