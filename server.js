@@ -1,71 +1,64 @@
 const express = require( 'express' );
 const { buildSchema } = require( 'graphql' );
 const { graphqlHTTP } = require( 'express-graphql' );
+const crypto = require( 'crypto' );
 
 const schema = buildSchema(`
     type Query {
-        hello: String
-        otherField: Int
-        rollDice(numDice: Int!, numSides: Int = 6): [Int]
-        user(name: String = "Test"): User
-        getDie(numSides: Int): RandomDie
+        getMessage(id: ID!): Message
+        getMessages: [Message]
     }
 
-    type User {
-        name: String
-        age: Float
+    type Message {
+        id: ID!
+        content: String
+        author: String
     }
 
-    type RandomDie {
-        numSides: Int
-        rollOnce: Int
-        roll(numRolls: Int!): [Int]
+    input MessageInput {
+        content: String
+        author: String
+    }
+
+    type Mutation {
+        createMessage(input: MessageInput): Message
+        updateMessage(id: ID!, input: MessageInput): Message
     }
 `);
 
-class RandomDie {
-    constructor (numSides) {
-        this.numSides = numSides;
-    }
-
-    rollOnce() {
-        return 1 + Math.floor(Math.random() * this.numSides)
-    }
-
-    roll({numRolls}) {
-        var output = []
-        for (let i = 0; i < numRolls; i++) {
-            output.push(this.rollOnce())
-        }
-        return output
+class Message {
+    constructor (id, {content, author}) {
+        this.id = id;
+        this.content = content
+        this.author = author
     }
 }
 
-class User {
-    constructor (name) {
-        this.name = name;
-    }
-
-    age() {
-        return Math.floor(Math.random() * 100)
-    }
-}
+const fakeDatabase = {}
 
 // Resolver
 const rootValue = {
-    hello: 'Hello world!',
-    otherField: 3,
-    rollDice: ({numDice, numSides}) => {
-        const output = [];
-
-        for (let i = 0; i < numDice; i++) {
-            output.push( 1 + Math.floor( Math.random() * numSides ) );
+    getMessage: ({id}) => {
+        if( !fakeDatabase[id] ) {
+            throw new Error('no message existed with id: ' + id)
         }
-
-        return output;
+        return new Message(id, fakeDatabase[id])
     },
-    user: (args) => new User(args.name),
-    getDie: (args) => new RandomDie(args.numSides),
+    createMessage: ({input}) => {
+        const id = crypto.randomBytes( 10 ).toString('hex')
+        fakeDatabase[id] = input
+        return new Message(id, input)
+    },
+    updateMessage: ({id, input}) => {
+        if( !fakeDatabase[id] ) {
+            throw new Error('no message existed with id: ' + id)
+        }
+        fakeDatabase[id] = input
+        return new Message(id, input)
+    },
+    getMessages: () => {
+        return Object.keys( fakeDatabase ).map( id => new Message( id, fakeDatabase[id] ))
+    },
 };
 
 const app = express();
